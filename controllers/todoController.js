@@ -1,26 +1,44 @@
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
 
-var data = [{item: 'go for exercise'}, {item: 'take bath'}, {item: 'play PUBG'}];
+var urlencodedParser = bodyParser.urlencoded({
+  extended: false
+});
 
-var urlencodedParser = bodyParser.urlencoded({extended: false});
+//Connect to db
+mongoose.connect('mongodb://jay:test123@ds257590.mlab.com:57590/todostestapp');
+
+//Create a schema
+var todoSchema = new mongoose.Schema({
+  item: String
+});
+
+var Todo = mongoose.model('Todo', todoSchema);
 
 module.exports = function(app) {
 
-app.get('/todo', function(req, res) {
-  res.render('todo', {todos: data});
-});
-
-app.post('/todo', urlencodedParser, function(req, res) {
-  data.push(req.body);
-  res.json(data);
-});
-
-app.delete('/todo/:item', function(req, res) {
-  console.log('in delete');
-  data = data.filter(function(todo) {
-    return todo.item.replace(/ /g, '-') !== req.params.item;
+  app.get('/todo', function(req, res) {
+    //fetch all the todos from mongodb
+    Todo.find({}, function(err, data) {
+      if (err) throw err;
+      res.render('todo', {todos: data});
+    });
   });
-  res.json(data);
-});
+
+  app.post('/todo', urlencodedParser, function(req, res) {
+    //save the todo in mongodb
+    var newTodo = Todo(req.body).save(function(err, data) {
+      if (err) throw err;
+      res.json(data);
+    });
+  });
+
+  app.delete('/todo/:item', function(req, res) {
+    //delete the todo from mongodb
+    Todo.find({item: req.params.item.replace(/\-/g, " ")}).remove(function(err, data) {
+      if(err) throw err;
+      res.json(data);
+    });
+  });
 
 };
